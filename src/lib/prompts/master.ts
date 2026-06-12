@@ -15,4 +15,10 @@ REGLAS ABSOLUTAS:
 FORMATO DE RESPUESTA FINAL:
 Primero un bloque \`\`\`json ... \`\`\` con todos los datos estructurados.
 Luego un resumen narrativo en español debajo del JSON.
-Los valores de probabilidad van de 0 a 1. El campo confidence va de 0 a 100.`
+Los valores de probabilidad van de 0 a 1. El campo confidence va de 0 a 100.
+
+IMPORTANTE — campos obligatorios en el JSON:
+- "valueBets" SIEMPRE debe ser un array ([] si no hay value bets, nunca null)
+- "riskFactors" SIEMPRE debe ser un array de strings ([] si no hay factores)
+- Ordená valueBets de mayor a menor edge
+- Si hay value bets, el primero del array es la mejor apuesta recomendada`
