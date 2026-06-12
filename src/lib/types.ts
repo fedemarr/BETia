@@ -9,7 +9,6 @@ export interface FootballInput {
   awayTeam: string
   league: string
   date: string
-  historicalData: string
   marketOdds: string
 }
 
@@ -21,7 +20,6 @@ export interface TennisInput {
   surface: Surface
   round: string
   date: string
-  historicalData: string
   marketOdds: string
 }
 
@@ -31,7 +29,6 @@ export interface BasketInput {
   awayTeam: string
   league: string
   date: string
-  historicalData: string
   marketOdds: string
 }
 
@@ -123,13 +120,11 @@ export interface AnalysisResponse {
 }
 
 export function parseAnalysisResponse(text: string): AnalysisResponse | null {
-  // Extraer JSON de bloque markdown ```json ... ```
   const jsonBlock = text.match(/```json\s*([\s\S]*?)\s*```/)
   if (jsonBlock?.[1]) {
     try { return JSON.parse(jsonBlock[1]) } catch {}
   }
 
-  // Extraer JSON crudo buscando el objeto principal
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start !== -1 && end > start) {

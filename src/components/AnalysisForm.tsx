@@ -20,44 +20,22 @@ const SURFACES: { value: Surface; label: string }[] = [
 const LEAGUES_BASKET = ['NBA', 'EuroLeague', 'NCB', 'ACB', 'NBL', 'Otra']
 
 const EXAMPLE_ODDS = {
-  football: `{"1X2": {"home": 2.10, "draw": 3.40, "away": 3.60},\n"goals": {"over15": 1.25, "over25": 1.85, "over35": 3.20},\n"btts": {"yes": 1.95, "no": 1.85}}`,
-  tennis:   `{"winner": {"p1": 1.80, "p2": 2.05},\n"sets": {"over35": 2.10, "under35": 1.70}}`,
-  basket:   `{"moneyline": {"home": 1.75, "away": 2.15},\n"total": {"line": 218.5, "over": 1.90, "under": 1.90}}`,
-}
-
-const EXAMPLE_DATA = {
-  football: `Real Madrid últimos 5 partidos (local): G 3-1, G 2-0, E 1-1, G 4-0, G 2-1
-Media goles marcados (local): 2.4 | Media goles recibidos: 0.8
-Barcelona últimos 5 partidos (visitante): P 0-2, G 1-0, E 2-2, G 3-1, P 0-1
-Media goles marcados (visitante): 1.2 | Media goles recibidos: 1.2
-H2H últimos 5: Real Madrid 3V, 1E, 1D
-Corners: Real Madrid 6.8 prom | Barcelona 5.2 prom`,
-  tennis: `Alcaraz último mes: W-W-W-L-W (4-1 clay) Ranking ELO clay: 2180
-Djokovic último mes: W-L-W-W-L (3-2 clay) Ranking ELO clay: 2150
-H2H: Alcaraz 3-2 Djokovic | H2H en clay: Alcaraz 2-0
-Aces prom: Alcaraz 4.2/partido | Djokovic 3.1/partido
-Break points conversión: Alcaraz 42% | Djokovic 48%`,
-  basket: `Lakers últimos 5 (local): G 118-105, P 102-115, G 125-118, G 112-108, P 98-115
-Offensive Rating Lakers: 112.4 | Defensive Rating: 108.2
-Celtics últimos 5 (visitante): G 125-110, G 118-102, P 98-110, G 120-115, G 115-108
-Offensive Rating Celtics: 118.2 | Defensive Rating: 105.1
-H2H temporada: Celtics 2-1 Lakers`,
+  football: `{"1X2": {"home": 2.10, "draw": 3.40, "away": 3.60},\n"goals": {"over15": 1.25, "over25": 1.85, "over35": 3.20},\n"btts": {"yes": 1.95, "no": 1.85},\n"corners": {"over85": 1.90, "under85": 1.90}}`,
+  tennis:   `{"winner": {"p1": 1.80, "p2": 2.05},\n"sets": {"over35": 2.10, "under35": 1.70},\n"set1Winner": {"p1": 1.85, "p2": 2.00}}`,
+  basket:   `{"moneyline": {"home": 1.75, "away": 2.15},\n"total": {"line": 218.5, "over": 1.90, "under": 1.90},\n"handicap": {"home": -4.5, "homeOdds": 1.90}}`,
 }
 
 export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
   const today = new Date().toISOString().split('T')[0]
 
   const [football, setFootball] = useState<Omit<FootballInput, 'sport'>>({
-    homeTeam: '', awayTeam: '', league: '', date: today,
-    historicalData: '', marketOdds: '',
+    homeTeam: '', awayTeam: '', league: '', date: today, marketOdds: '',
   })
   const [tennis, setTennis] = useState<Omit<TennisInput, 'sport'>>({
-    p1: '', p2: '', tournament: '', surface: 'clay', round: '', date: today,
-    historicalData: '', marketOdds: '',
+    p1: '', p2: '', tournament: '', surface: 'clay', round: '', date: today, marketOdds: '',
   })
   const [basket, setBasket] = useState<Omit<BasketInput, 'sport'>>({
-    homeTeam: '', awayTeam: '', league: 'NBA', date: today,
-    historicalData: '', marketOdds: '',
+    homeTeam: '', awayTeam: '', league: 'NBA', date: today, marketOdds: '',
   })
 
   function handleSubmit(e: React.FormEvent) {
@@ -71,25 +49,22 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
 
   function fillExample() {
     if (sport === 'football') {
-      setFootball(prev => ({
-        ...prev,
+      setFootball(p => ({
+        ...p,
         homeTeam: 'Real Madrid', awayTeam: 'Barcelona', league: 'La Liga',
-        historicalData: EXAMPLE_DATA.football,
         marketOdds: EXAMPLE_ODDS.football,
       }))
     } else if (sport === 'tennis') {
-      setTennis(prev => ({
-        ...prev,
+      setTennis(p => ({
+        ...p,
         p1: 'Carlos Alcaraz', p2: 'Novak Djokovic',
-        tournament: 'Roland Garros', surface: 'clay', round: 'Semifinal',
-        historicalData: EXAMPLE_DATA.tennis,
+        tournament: 'Wimbledon', surface: 'grass', round: 'Semifinal',
         marketOdds: EXAMPLE_ODDS.tennis,
       }))
     } else {
-      setBasket(prev => ({
-        ...prev,
+      setBasket(p => ({
+        ...p,
         homeTeam: 'LA Lakers', awayTeam: 'Boston Celtics', league: 'NBA',
-        historicalData: EXAMPLE_DATA.basket,
         marketOdds: EXAMPLE_ODDS.basket,
       }))
     }
@@ -102,7 +77,12 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-700 bg-slate-800 p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-slate-200">Configurar partido</h2>
+        <div>
+          <h2 className="font-semibold text-slate-200">Configurar partido</h2>
+          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+            <span>🔍</span> La IA busca automáticamente los datos actualizados
+          </p>
+        </div>
         <button
           type="button"
           onClick={fillExample}
@@ -158,7 +138,7 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className={labelCls}>Torneo</label>
-              <input className={inputCls} placeholder="Roland Garros" value={tennis.tournament}
+              <input className={inputCls} placeholder="Wimbledon" value={tennis.tournament}
                 onChange={e => setTennis(p => ({ ...p, tournament: e.target.value }))} required />
             </div>
             <div>
@@ -215,31 +195,11 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
         </>
       )}
 
-      {/* Datos históricos */}
-      <div>
-        <label className={labelCls}>
-          Datos históricos
-          <span className="text-slate-600 ml-1">(forma, H2H, estadísticas)</span>
-        </label>
-        <textarea
-          className={textareaCls}
-          rows={5}
-          placeholder={EXAMPLE_DATA[sport]}
-          value={sport === 'football' ? football.historicalData : sport === 'tennis' ? tennis.historicalData : basket.historicalData}
-          onChange={e => {
-            const v = e.target.value
-            if (sport === 'football') setFootball(p => ({ ...p, historicalData: v }))
-            else if (sport === 'tennis') setTennis(p => ({ ...p, historicalData: v }))
-            else setBasket(p => ({ ...p, historicalData: v }))
-          }}
-        />
-      </div>
-
-      {/* Cuotas */}
+      {/* Cuotas del mercado */}
       <div>
         <label className={labelCls}>
           Cuotas del mercado
-          <span className="text-slate-600 ml-1">(JSON o texto libre)</span>
+          <span className="text-slate-600 ml-1">(pegá las cuotas de tu casa de apuestas)</span>
         </label>
         <textarea
           className={textareaCls}
@@ -253,6 +213,9 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
             else setBasket(p => ({ ...p, marketOdds: v }))
           }}
         />
+        <p className="text-xs text-slate-600 mt-1">
+          Formato libre: JSON, texto o "1X2: local 2.10 / empate 3.40 / visitante 3.60"
+        </p>
       </div>
 
       <button
@@ -268,7 +231,7 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
             <span className="w-4 h-4 border-2 border-slate-500 border-t-slate-300 rounded-full animate-spin" />
-            Analizando con Claude...
+            Buscando datos y analizando...
           </span>
         ) : (
           '🤖 Analizar partido'

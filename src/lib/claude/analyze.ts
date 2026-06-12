@@ -27,9 +27,15 @@ export async function streamAnalysis(input: AnalysisInput): Promise<ReadableStre
       try {
         const stream = anthropic.messages.stream({
           model,
-          max_tokens: 4096,
+          max_tokens: 8192,
           system: MASTER_PROMPT,
           messages: [{ role: 'user', content: userPrompt }],
+          tools: [
+            {
+              type: 'web_search_20250305',
+              name: 'web_search',
+            },
+          ],
         })
 
         for await (const event of stream) {

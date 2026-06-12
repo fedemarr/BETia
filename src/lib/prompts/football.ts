@@ -1,96 +1,67 @@
 import type { FootballInput } from '../types'
 
 export function buildFootballPrompt(input: FootballInput): string {
-  return `Sos un analista de fútbol profesional con acceso a los siguientes datos
-del partido ${input.homeTeam} vs ${input.awayTeam} (${input.league}):
+  return `Analizá el partido de fútbol: ${input.homeTeam} vs ${input.awayTeam}
+Liga: ${input.league} | Fecha: ${input.date}
 
-=== DATOS HISTÓRICOS DISPONIBLES ===
-${input.historicalData || 'No se proporcionaron datos históricos. Indicá nivel de confianza BAJO y avisá que se necesitan más datos.'}
+=== PASO 1: BÚSQUEDA DE DATOS (ejecutá estas búsquedas con web_search) ===
 
-Con base en esos datos, analizá TODOS los mercados siguientes y devolvé
-el análisis en el formato especificado. Sé preciso y fundamentá cada
-probabilidad con los datos históricos.
+Buscá en este orden:
+1. "${input.homeTeam} últimos partidos 2025 resultados goles" — forma reciente del local
+2. "${input.awayTeam} últimos partidos 2025 resultados goles" — forma reciente del visitante
+3. "${input.homeTeam} vs ${input.awayTeam} historial head to head" — H2H
+4. "${input.homeTeam} ${input.awayTeam} lesiones bajas ${input.date}" — lesiones/suspensiones
+5. "${input.homeTeam} ${input.awayTeam} estadísticas xG corners tarjetas ${input.league}" — stats avanzadas
 
-=== MERCADOS A ANALIZAR ===
+Recopilá al menos: últimos 5 partidos de cada equipo, H2H reciente, lesiones confirmadas,
+posición en la tabla, xG promedio si está disponible.
+
+=== PASO 2: ANÁLISIS DE MERCADOS ===
+
+Con los datos encontrados, analizá TODOS estos mercados:
 
 1. RESULTADO FINAL (1X2)
-   - Calcula P(victoria local), P(empate), P(victoria visitante)
-   - Usá el modelo Dixon-Coles ajustado con ventaja local (factor 1.15)
-   - Considerá: forma reciente (últimos 5 partidos), rendimiento como local/visitante, H2H
+   - P(victoria local), P(empate), P(victoria visitante)
+   - Modelo Dixon-Coles con ventaja local (factor 1.15)
+   - Considerá: forma reciente, rendimiento local/visitante, H2H
 
-2. GOLES (Modelo Poisson obligatorio)
-   - Calculá λ_home y λ_away (goles esperados por equipo)
-   - Derivá probabilidades para: Over/Under 1.5, 2.5, 3.5
-   - BTTS Sí / No
-   - Marcador más probable (top 5 scores)
-   - Goles primer tiempo Over/Under 0.5, 1.5
-   - Primer equipo en anotar (local %, visitante %, sin goles primer tiempo %)
+2. GOLES (Modelo Poisson)
+   - Calculá λ_home y λ_away (goles esperados)
+   - Over/Under 1.5, 2.5, 3.5 | BTTS Sí/No
+   - Top 5 marcadores más probables | Goles primer tiempo
 
 3. CORNERS
-   - Promedio esperado de corners del partido
-   - P(Over 7.5), P(Over 8.5), P(Over 9.5), P(Over 10.5)
-   - Corners primer tiempo Over/Under 4.5
-   - Equipo con más corners
-   - Fundamento: promedio de corners últimos 10 partidos de cada equipo
+   - Promedio esperado | P(Over 7.5 / 8.5 / 9.5 / 10.5)
 
 4. TARJETAS AMARILLAS
-   - Promedio esperado del partido
-   - P(Over 2.5), P(Over 3.5), P(Over 4.5) amarillas
-   - P(tarjeta roja en el partido)
-   - Equipo con más amarillas (%)
+   - P(Over 2.5 / 3.5 / 4.5) | P(tarjeta roja)
 
 5. FALTAS
-   - Total de faltas esperadas
-   - P(Over 22.5), P(Over 26.5) faltas totales
-   - Equipo más foulero (%)
+   - Total esperado | P(Over 22.5 / 26.5)
 
 6. HÁNDICAP ASIÁTICO
-   - Local -0.5, -1, -1.5
-   - Visitante +0.5, +1, +1.5
-   - Hándicap de goles para Over/Under
+   - Local -0.5 / -1 / -1.5 | Visitante +0.5 / +1 / +1.5
 
-7. ESTADÍSTICAS DE JUGADORES (si hay datos disponibles)
-   - Goleador probable: top 3 candidatos con % de probabilidad
-   - Jugador con más probabilidad de ser amonestado
-   - Jugador con más probabilidad de dar asistencia
+7. JUGADORES DESTACADOS (si encontraste datos)
+   - Top 3 candidatos a goleador con probabilidad
 
-=== CUOTAS ACTUALES DEL MERCADO ===
+=== CUOTAS DEL MERCADO ===
 ${input.marketOdds || 'No se proporcionaron cuotas. Omití el cálculo de value bets.'}
 
-=== CÁLCULO DE VALUE BETS ===
-Para cada mercado donde haya cuotas disponibles:
-- Calculá implied_probability = 1 / odds
-- Calculá edge = nuestra_probabilidad - implied_probability
-- Si edge > 0.05 (5%): marcalo como VALUE BET
-- Si edge > 0.10 (10%): marcalo como STRONG VALUE BET
-- Calculá expected_value = (nuestra_prob × odds) - 1
-
-=== FACTORES DE RIESGO ===
-Analizá y mencioná:
-- Lesiones o suspensiones confirmadas
-- Fatiga (partidos en los últimos 4 días)
-- Motivación (posición en la tabla, necesidad de puntos)
-- Clima (si afecta el juego)
-- Historial entre estos equipos (últimos 5 H2H)
+=== PASO 3: VALUE BETS ===
+Para cada mercado con cuotas:
+- implied_probability = 1 / odds
+- edge = nuestra_probabilidad - implied_probability
+- VALUE BET si edge > 0.05 | STRONG VALUE BET si edge > 0.10
+- expected_value = (nuestra_prob × odds) - 1
 
 === SCORE DE CONFIANZA (0-100) ===
-Calculalo en base a:
-- Cantidad de partidos históricos disponibles (máx 25 pts)
-- Coherencia entre Poisson y regresión logística (máx 25 pts)
-- Recencia de los datos (máx 20 pts)
-- Consistencia H2H con el modelo (máx 20 pts)
-- Alineación con cuotas de mercado (máx 10 pts)
+- Cantidad de datos encontrados (máx 30 pts)
+- Recencia de los datos (máx 25 pts)
+- Coherencia del modelo Poisson (máx 25 pts)
+- H2H consistency (máx 20 pts)
 
-=== FORMATO DE RESPUESTA ===
-Primero el JSON con todos los datos estructurados dentro de \`\`\`json ... \`\`\`.
-Luego un resumen narrativo de 150-200 palabras en español que:
-- Destaque los mercados más confiables
-- Mencione los value bets con mayor edge
-- Señale los principales factores de riesgo
-- Indique el nivel de confianza general
-- Recuerde que son probabilidades, no certezas
-
-Partido: ${input.homeTeam} vs ${input.awayTeam}
-Liga: ${input.league}
-Fecha: ${input.date}`
+=== FORMATO FINAL ===
+\`\`\`json con todos los campos de AnalysisResponse.
+Luego narrativa de 150-200 palabras en español destacando value bets y factores de riesgo.`
 }
