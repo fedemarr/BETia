@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 import type { Sport, AnalysisInput, FootballInput, TennisInput, BasketInput, Surface } from '@/lib/types'
 
@@ -26,17 +26,23 @@ const EXAMPLE_ODDS = {
 }
 
 export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
-  const today = new Date().toISOString().split('T')[0]
-
   const [football, setFootball] = useState<Omit<FootballInput, 'sport'>>({
-    homeTeam: '', awayTeam: '', league: '', date: today, marketOdds: '',
+    homeTeam: '', awayTeam: '', league: '', date: '', marketOdds: '',
   })
   const [tennis, setTennis] = useState<Omit<TennisInput, 'sport'>>({
-    p1: '', p2: '', tournament: '', surface: 'clay', round: '', date: today, marketOdds: '',
+    p1: '', p2: '', tournament: '', surface: 'clay', round: '', date: '', marketOdds: '',
   })
   const [basket, setBasket] = useState<Omit<BasketInput, 'sport'>>({
-    homeTeam: '', awayTeam: '', league: 'NBA', date: today, marketOdds: '',
+    homeTeam: '', awayTeam: '', league: 'NBA', date: '', marketOdds: '',
   })
+
+  // Seteamos la fecha solo en el cliente para evitar hydration mismatch (servidor UTC ≠ cliente AR)
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    setFootball(p => ({ ...p, date: today }))
+    setTennis(p => ({ ...p, date: today }))
+    setBasket(p => ({ ...p, date: today }))
+  }, [])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
