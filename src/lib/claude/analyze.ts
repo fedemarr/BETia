@@ -18,7 +18,7 @@ function buildUserPrompt(input: AnalysisInput): string {
 }
 
 export async function streamAnalysis(input: AnalysisInput): Promise<ReadableStream<Uint8Array>> {
-  const model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'
+  const model = process.env.CLAUDE_MODEL || 'claude-haiku-4-5'
   const userPrompt = buildUserPrompt(input)
   const encoder = new TextEncoder()
 
@@ -34,7 +34,7 @@ export async function streamAnalysis(input: AnalysisInput): Promise<ReadableStre
             {
               type: 'web_search_20250305',
               name: 'web_search',
-              max_uses: 5,
+              max_uses: 2,
             },
           ],
         })

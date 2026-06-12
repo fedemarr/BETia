@@ -1,191 +1,168 @@
 'use client'
 
 import clsx from 'clsx'
-import ValueBetCard from './ValueBetCard'
-import type { AnalysisResponse, ValueBet } from '@/lib/types'
+import type { AnalysisResponse } from '@/lib/types'
 
 interface Props {
-  streamText: string
   analysis: AnalysisResponse | null
   isLoading: boolean
+  streamText: string
 }
 
-function ConfidenceBar({ value }: { value: number }) {
-  const v = Number(value) || 50
-  const color = v >= 70 ? 'bg-green-500' : v >= 45 ? 'bg-amber-500' : 'bg-red-500'
+function ConfidenceRing({ value }: { value: number }) {
+  const v = Math.min(100, Math.max(0, value))
+  const color = v >= 70 ? 'text-green-400' : v >= 50 ? 'text-amber-400' : 'text-red-400'
+  const label = v >= 70 ? 'Alta' : v >= 50 ? 'Media' : 'Baja'
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-slate-400">
-        <span>Confianza del modelo</span>
-        <span className="font-semibold text-slate-200">{v}/100</span>
-      </div>
-      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-        <div className={clsx('h-full rounded-full transition-all', color)} style={{ width: `${v}%` }} />
-      </div>
+    <div className="flex flex-col items-center gap-1">
+      <div className={clsx('text-4xl font-black tabular-nums', color)}>{v}<span className="text-lg font-normal">%</span></div>
+      <div className="text-xs text-slate-400">Confianza {label}</div>
     </div>
   )
 }
 
-function RiskBadge({ risk }: { risk?: string }) {
-  const r = risk ?? 'MEDIO'
+function RiskBadge({ level }: { level?: string }) {
   const styles: Record<string, string> = {
-    BAJO:  'bg-green-500/20 text-green-400 border-green-500/30',
-    MEDIO: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    ALTO:  'bg-red-500/20 text-red-400 border-red-500/30',
+    BAJO:  'bg-green-500/20 text-green-300 border-green-500/30',
+    MEDIO: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    ALTO:  'bg-red-500/20 text-red-300 border-red-500/30',
   }
+  const l = level ?? 'MEDIO'
   return (
-    <span className={clsx('text-xs font-semibold px-2.5 py-1 rounded-full border', styles[r] ?? styles.MEDIO)}>
-      Riesgo {r}
+    <span className={clsx('text-xs font-semibold px-3 py-1 rounded-full border', styles[l] ?? styles.MEDIO)}>
+      Riesgo {l}
     </span>
   )
 }
 
-function BestBetBanner({ bets }: { bets: ValueBet[] }) {
-  if (!bets.length) return null
-  const sorted = [...bets].sort((a, b) => (b.edge ?? 0) - (a.edge ?? 0))
-  const top = sorted[0]
-  if (!top) return null
+function DataQualityBadge({ quality }: { quality?: string }) {
+  const styles: Record<string, string> = {
+    ALTA:  'text-green-400',
+    MEDIA: 'text-amber-400',
+    BAJA:  'text-red-400',
+  }
+  const q = quality ?? 'MEDIA'
+  return (
+    <span className={clsx('text-xs', styles[q] ?? styles.MEDIA)}>
+      Datos: {q}
+    </span>
+  )
+}
 
-  const isStrong = (top.edge ?? 0) > 0.10
-  const edgePct  = ((top.edge ?? 0) * 100).toFixed(1)
-  const prob     = ((top.ourProbability ?? 0) * 100).toFixed(0)
-  const odds     = typeof top.marketOdds === 'number' ? top.marketOdds.toFixed(2) : '—'
-  const ev       = ((top.expectedValue ?? 0) * 100).toFixed(1)
+export default function AnalysisResult({ analysis, isLoading, streamText }: Props) {
+  if (!isLoading && !analysis) {
+    return (
+      <div className="rounded-2xl border border-slate-700 bg-slate-800/30 flex flex-col items-center justify-center min-h-[420px] text-center p-8 gap-4">
+        <div className="text-5xl">🎯</div>
+        <div>
+          <p className="text-slate-200 font-semibold text-lg">Tu apuesta aparecerá aquí</p>
+          <p className="text-slate-500 text-sm mt-1">La IA busca los datos y te dice exactamente qué apostar</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-slate-700 bg-slate-800/30 flex flex-col items-center justify-center min-h-[420px] text-center p-8 gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-slate-700 border-t-green-400 animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center text-2xl">🔍</div>
+        </div>
+        <div>
+          <p className="text-slate-200 font-semibold">Buscando datos del partido...</p>
+          <p className="text-slate-500 text-sm mt-1">Forma reciente · Lesiones · H2H · Estadísticas</p>
+        </div>
+        {streamText && (
+          <div className="text-xs text-slate-600 max-w-xs truncate">Procesando respuesta...</div>
+        )}
+      </div>
+    )
+  }
+
+  const bet = analysis!.bestBet
+  const alts = analysis!.alternatives ?? []
+  const isHighConfidence = (bet.confidence ?? 0) >= 70
+  const hasEdge = typeof bet.edge === 'number' && bet.edge > 0
+  const edgePct = hasEdge ? (bet.edge! * 100).toFixed(1) : null
 
   return (
-    <div className={clsx(
-      'rounded-2xl border-2 p-5 space-y-3',
-      isStrong ? 'border-amber-400 bg-amber-500/10' : 'border-green-400 bg-green-500/10'
-    )}>
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🎯</span>
-        <p className={clsx('font-bold text-base', isStrong ? 'text-amber-300' : 'text-green-300')}>
-          {isStrong ? 'MEJOR APUESTA — STRONG VALUE' : 'MEJOR APUESTA'}
-        </p>
-      </div>
+    <div className="space-y-4">
 
-      <div className="bg-slate-900/60 rounded-xl p-4 space-y-2">
-        <p className="text-slate-100 font-semibold text-lg">{top.market ?? '—'}</p>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <div><span className="text-slate-400">Cuota </span><span className="font-bold text-white">{odds}</span></div>
-          <div><span className="text-slate-400">Prob. estadística </span><span className="font-bold text-green-400">{prob}%</span></div>
-          <div><span className="text-slate-400">Edge </span><span className={clsx('font-bold', isStrong ? 'text-amber-400' : 'text-green-400')}>+{edgePct}%</span></div>
-          <div><span className="text-slate-400">EV </span><span className="font-bold text-green-400">+{ev}%</span></div>
+      {/* Apuesta principal */}
+      <div className={clsx(
+        'rounded-2xl border-2 p-6 space-y-5',
+        isHighConfidence ? 'border-green-400 bg-green-500/8' : 'border-amber-400 bg-amber-500/8'
+      )}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎯</span>
+            <span className={clsx('font-bold text-sm uppercase tracking-wider', isHighConfidence ? 'text-green-400' : 'text-amber-400')}>
+              Mejor apuesta
+            </span>
+          </div>
+          <RiskBadge level={analysis!.riskLevel} />
+        </div>
+
+        {/* Mercado destacado */}
+        <div className="bg-slate-900/60 rounded-xl p-5 space-y-4">
+          <p className="text-white font-bold text-2xl leading-tight">{bet.market}</p>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-slate-400 text-xs uppercase tracking-wide">Cuota</p>
+              <p className="text-4xl font-black text-white tabular-nums">
+                {typeof bet.odds === 'number' && bet.odds > 0 ? bet.odds.toFixed(2) : '—'}
+              </p>
+            </div>
+            <ConfidenceRing value={bet.confidence ?? 50} />
+            {edgePct && (
+              <div className="text-right space-y-0.5">
+                <p className="text-slate-400 text-xs uppercase tracking-wide">Edge</p>
+                <p className="text-2xl font-black text-green-400">+{edgePct}%</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Razón */}
+        {bet.reason && (
+          <div className="flex gap-3 bg-slate-800/60 rounded-xl p-4">
+            <span className="text-lg shrink-0">💡</span>
+            <p className="text-slate-300 text-sm leading-relaxed">{bet.reason}</p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1">
+          <DataQualityBadge quality={analysis!.dataQuality} />
+          <p className="text-xs text-slate-600">Análisis estadístico IA · No garantiza resultado</p>
         </div>
       </div>
 
-      {sorted.length > 1 && (
-        <div className="pt-1">
-          <p className="text-xs text-slate-400 mb-2">Otras opciones con valor:</p>
-          <div className="flex flex-col gap-1">
-            {sorted.slice(1, 3).map((b, i) => (
-              <div key={i} className="flex justify-between text-sm px-1">
-                <span className="text-slate-300 truncate mr-2">{b.market ?? '—'}</span>
-                <span className="text-green-400 shrink-0 font-medium">
-                  {typeof b.marketOdds === 'number' ? b.marketOdds.toFixed(2) : '—'} · +{((b.edge ?? 0) * 100).toFixed(1)}% edge
-                </span>
+      {/* Alternativas */}
+      {alts.length > 0 && (
+        <div className="rounded-2xl border border-slate-700 bg-slate-800/40 p-4 space-y-3">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Otras opciones</p>
+          <div className="space-y-2">
+            {alts.map((alt, i) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0">
+                <span className="text-slate-300 text-sm">{alt.market}</span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-white font-bold text-sm">
+                    {typeof alt.odds === 'number' && alt.odds > 0 ? alt.odds.toFixed(2) : '—'}
+                  </span>
+                  <span className={clsx(
+                    'text-xs font-semibold px-2 py-0.5 rounded-full',
+                    (alt.confidence ?? 0) >= 65 ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'
+                  )}>
+                    {alt.confidence ?? 0}%
+                  </span>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function stripJsonBlock(raw: string): string {
-  // Remove ```json ... ``` blocks so only the narrative shows
-  return raw
-    .replace(/```json[\s\S]*?```/g, '')
-    .replace(/```[\s\S]*?```/g, '')
-    .trim()
-}
-
-export default function AnalysisResult({ streamText, analysis, isLoading }: Props) {
-  const raw          = streamText ?? ''
-  const text         = isLoading ? raw : stripJsonBlock(raw)
-  const hasContent   = raw.length > 0
-  const hasAnalysis  = analysis != null
-
-  const valueBets: ValueBet[] = Array.isArray(analysis?.valueBets)  ? analysis!.valueBets  : []
-  const riskFactors: string[] = Array.isArray(analysis?.riskFactors) ? analysis!.riskFactors : []
-
-  if (!hasContent && !isLoading) {
-    return (
-      <div className="rounded-2xl border border-slate-700 bg-slate-800/30 flex flex-col items-center justify-center min-h-[500px] text-center p-8">
-        <div className="text-4xl mb-4">🤖</div>
-        <p className="text-slate-300 font-medium">El análisis aparecerá aquí</p>
-        <p className="text-slate-500 text-sm mt-2">Completá el formulario y hacé click en Analizar</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-
-      {/* 🎯 Mejor apuesta — siempre arriba */}
-      {hasAnalysis && valueBets.length > 0 && <BestBetBanner bets={valueBets} />}
-
-      {/* Header */}
-      {hasAnalysis && (
-        <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="font-bold text-lg text-slate-100">
-                {analysis?.match?.home ?? '?'} vs {analysis?.match?.away ?? '?'}
-              </h2>
-              <p className="text-slate-400 text-sm">
-                {analysis?.match?.league ?? ''}{analysis?.match?.date ? ` · ${analysis.match.date}` : ''}
-              </p>
-            </div>
-            <RiskBadge risk={analysis?.match?.risk} />
-          </div>
-          <ConfidenceBar value={analysis?.match?.confidence ?? 50} />
-        </div>
-      )}
-
-      {/* Todas las Value Bets */}
-      {hasAnalysis && valueBets.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider px-1">
-            Todas las value bets ({valueBets.length})
-          </h3>
-          <div className="space-y-3">
-            {[...valueBets]
-              .sort((a, b) => (b.edge ?? 0) - (a.edge ?? 0))
-              .map((bet, i) => <ValueBetCard key={i} bet={bet} />)}
-          </div>
-        </div>
-      )}
-
-      {/* Factores de riesgo */}
-      {hasAnalysis && riskFactors.length > 0 && (
-        <div className="rounded-2xl border border-slate-700 bg-slate-800 p-4">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Factores de riesgo</h3>
-          <ul className="space-y-1.5">
-            {riskFactors.map((f, i) => (
-              <li key={i} className="text-sm text-slate-300 flex gap-2">
-                <span className="text-amber-400 shrink-0">⚠</span>
-                {typeof f === 'string' ? f : JSON.stringify(f)}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Narrativa / stream en vivo */}
-      <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-          {isLoading && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse-fast" />}
-          {isLoading ? 'Buscando datos y analizando...' : 'Análisis completo'}
-        </h3>
-        <div className={clsx(
-          'text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-mono max-h-[400px] overflow-y-auto',
-          isLoading && text.length > 0 && 'cursor-blink'
-        )}>
-          {text || (isLoading ? <span className="text-slate-500">Conectando con Claude...</span> : null)}
-        </div>
-      </div>
     </div>
   )
 }
