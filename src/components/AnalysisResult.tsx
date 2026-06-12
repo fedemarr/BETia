@@ -93,9 +93,18 @@ function BestBetBanner({ bets }: { bets: ValueBet[] }) {
   )
 }
 
+function stripJsonBlock(raw: string): string {
+  // Remove ```json ... ``` blocks so only the narrative shows
+  return raw
+    .replace(/```json[\s\S]*?```/g, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .trim()
+}
+
 export default function AnalysisResult({ streamText, analysis, isLoading }: Props) {
-  const text         = streamText ?? ''
-  const hasContent   = text.length > 0
+  const raw          = streamText ?? ''
+  const text         = isLoading ? raw : stripJsonBlock(raw)
+  const hasContent   = raw.length > 0
   const hasAnalysis  = analysis != null
 
   const valueBets: ValueBet[] = Array.isArray(analysis?.valueBets)  ? analysis!.valueBets  : []
