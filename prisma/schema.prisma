@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Sport {
+  FOOTBALL
+  TENNIS
+  BASKET
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
+
+// ─── FÚTBOL ──────────────────────────────────────────────────────────────────
+
+model FootballTeam {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  name       String
+  league     String
+  country    String
+
+  homeMatches FootballMatch[] @relation("FootballHome")
+  awayMatches FootballMatch[] @relation("FootballAway")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FootballMatch {
+  id         String   @id @default(cuid())
+  externalId String   @unique
+  homeTeamId String
+  awayTeamId String
+  league     String
+  season     String?
+
+  status      MatchStatus @default(SCHEDULED)
+  scheduledAt DateTime
+
+  homeScore Int?
+  awayScore Int?
+
+  homeXg    Float?
+  awayXg    Float?
+  corners   Int?
+  yellowCards Int?
+  redCards  Int?
+
+  oddsHome  Float?
+  oddsDraw  Float?
+  oddsAway  Float?
+  oddsOver25 Float?
+
+  homeTeam    FootballTeam @relation("FootballHome", fields: [homeTeamId], references: [id])
+  awayTeam    FootballTeam @relation("FootballAway", fields: [awayTeamId], references: [id])
+  predictions Prediction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── TENIS ───────────────────────────────────────────────────────────────────
+
+model TennisPlayer {
+  id         String @id @default(cuid())
+  externalId String @unique
+  name       String
+  country    String
+  ranking    Int?
+  rankingElo Int?
+
+  matchesP1 TennisMatch[] @relation("Player1")
+  matchesP2 TennisMatch[] @relation("Player2")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TennisMatch {
+  id         String @id @default(cuid())
+  externalId String @unique
+  p1Id       String
+  p2Id       String
+  tournament String
+  surface    String
+  round      String
+
+  status      MatchStatus @default(SCHEDULED)
+  scheduledAt DateTime
+
+  winner     String?
+  setsP1     Int?
+  setsP2     Int?
+  totalGames Int?
+
+  oddsP1      Float?
+  oddsP2      Float?
+  oddsOver35Sets Float?
+
+  p1          TennisPlayer @relation("Player1", fields: [p1Id], references: [id])
+  p2          TennisPlayer @relation("Player2", fields: [p2Id], references: [id])
+  predictions Prediction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── BÁSQUET ─────────────────────────────────────────────────────────────────
+
+model BasketTeam {
+  id         String @id @default(cuid())
+  externalId String @unique
+  name       String
+  league     String
+
+  homeMatches BasketMatch[] @relation("BasketHome")
+  awayMatches BasketMatch[] @relation("BasketAway")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BasketMatch {
+  id         String @id @default(cuid())
+  externalId String @unique
+  homeTeamId String
+  awayTeamId String
+  league     String
+
+  status      MatchStatus @default(SCHEDULED)
+  scheduledAt DateTime
+
+  homeScore Int?
+  awayScore Int?
+  overtime  Boolean @default(false)
+
+  homePPG     Float?
+  awayPPG     Float?
+  totalPoints Int?
+
+  oddsHome Float?
+  oddsAway Float?
+  oddsOver Float?
+  oddsLine Float?
+
+  homeTeam    BasketTeam @relation("BasketHome", fields: [homeTeamId], references: [id])
+  awayTeam    BasketTeam @relation("BasketAway", fields: [awayTeamId], references: [id])
+  predictions Prediction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── PREDICCIONES ────────────────────────────────────────────────────────────
+
+model Prediction {
+  id      String @id @default(cuid())
+  sport   Sport  @default(FOOTBALL)
+  matchRef String?
+
+  footballMatchId String?
+  tennisMatchId   String?
+  basketMatchId   String?
+
+  market     String
+  ourProb    Float
+  marketOdds Float
+  edge       Float
+  ev         Float
+
+  result    String? // WIN | LOSS | VOID
+  isValueBet Boolean @default(false)
+
+  rawResponse String? @db.Text
+  modelUsed   String?
+
+  footballMatch FootballMatch? @relation(fields: [footballMatchId], references: [id])
+  tennisMatch   TennisMatch?   @relation(fields: [tennisMatchId], references: [id])
+  basketMatch   BasketMatch?   @relation(fields: [basketMatchId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
