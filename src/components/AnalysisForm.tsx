@@ -199,12 +199,11 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
       <div>
         <label className={labelCls}>
           Cuotas del mercado
-          <span className="text-slate-600 ml-1">(pegá las cuotas de tu casa de apuestas)</span>
         </label>
         <textarea
           className={textareaCls}
-          rows={4}
-          placeholder={EXAMPLE_ODDS[sport]}
+          rows={3}
+          placeholder={`https://www.betano.bet.ar/cuotas-de-partido/...\n\nO pegá las cuotas directamente:\n${EXAMPLE_ODDS[sport]}`}
           value={sport === 'football' ? football.marketOdds : sport === 'tennis' ? tennis.marketOdds : basket.marketOdds}
           onChange={e => {
             const v = e.target.value
@@ -214,7 +213,7 @@ export default function AnalysisForm({ sport, onAnalyze, isLoading }: Props) {
           }}
         />
         <p className="text-xs text-slate-600 mt-1">
-          Formato libre: JSON, texto o "1X2: local 2.10 / empate 3.40 / visitante 3.60"
+          Pegá el link de Betano, Bet365, Codere, etc. — o las cuotas en texto/JSON
         </p>
       </div>
 
